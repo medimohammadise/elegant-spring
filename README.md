@@ -67,35 +67,22 @@ Error responses:
 - If `layoutHints` is present and `includeLayout=true`, seed diagram coordinates for reproducible layouts; otherwise allow ngdiagram’s auto layout.
 
 ## Reference implementation (ng-diagram v1.0.0, Angular 18+)
-Use **ng-diagram v1.0.0** with Angular standalone components and the library’s `initializeModel` helper. The full runnable component lives in [`graph.component.ts`](./graph.component.ts). A mock API server (Node.js built-ins only, no external npm deps) is provided in [`mock-server.js`](./mock-server.js).
+Use **ng-diagram v1.0.0** with Angular standalone components and the library’s `initializeModel` helper. A full runnable Angular app lives in [`ngdiagram-app`](./ngdiagram-app) with the graph UI in [`src/app/graph/graph.component.ts`](./ngdiagram-app/src/app/graph/graph.component.ts). A mock API server (Node.js built-ins only, no external npm deps) is provided in [`mock-server.js`](./mock-server.js).
 
 ```bash
-npm install ng-diagram@latest @angular/core@18 @angular/common@18 @angular/platform-browser@18 rxjs zone.js
-```
-
-```typescript
-// See full component in graph.component.ts
-```
-
-Style import (required):
-
-```scss
-/* src/styles.scss */
-@import 'ng-diagram/styles.css';
-```
-
-Mock API response for local dev lives in [`graph-mock.json`](./graph-mock.json); serve it via `json-server`, a simple Express stub, or Angular’s `http-server` to test the diagram quickly.
-
-### Run locally (mock)
-```bash
-# 1) Start mock API
+# Install and run mock API (serves /api/graph)
 node mock-server.js
 
-# 2) Serve Angular app (example)
-# - scaffold with Angular CLI or reuse your existing app
-# - import GraphComponent (graph.component.ts) in main.ts
-# - ensure styles import in src/styles.scss: @import 'ng-diagram/styles.css';
+# Install and run Angular app (with dev proxy to /api)
+cd ngdiagram-app
+npm install
+npm start
+# open http://localhost:4200 (dev server proxies /api to 3000)
 ```
+
+Style import (already wired): `ngdiagram-app/src/styles.scss` imports `ng-diagram/styles.css`.
+
+Mock API response for local dev lives in [`graph-mock.json`](./graph-mock.json); it is served by `mock-server.js`.
 
 ## Next steps
 - Replace mock data with Modulith metadata (Spring Modulith `ApplicationModules`) and tracing data.  

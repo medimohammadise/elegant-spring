@@ -1,0 +1,31 @@
+ :host {
+   display: block;
+   min-height: 100vh;
+   color: #e2e8f0;
+   background: #0b1220;
+   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+ }
+
+ .app-shell {
+   display: flex;
+   flex-direction: column;
+   min-height: 100vh;
+ }
+
+ header {
+   padding: 1.5rem 1.5rem 0.5rem;
+ }
+
+ h1 {
+   margin: 0 0 0.25rem;
+   font-size: 1.5rem;
+ }
+
+ p {
+   margin: 0;
+   color: #94a3b8;
+ }
+
+ .graph-host {
+   flex: 1;
+ }

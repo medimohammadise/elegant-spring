@@ -1,10 +1,5 @@
-// Standalone Angular component that renders the communication graph with ng-diagram v1.0.0.
-// Assumes Angular 18+. Import in your bootstrap (e.g., main.ts) and add the global styles import in src/styles.scss:
-//   @import 'ng-diagram/styles.css';
-// Endpoint: /api/graph (served by mock-server.js or your Spring Modulith backend).
-
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { NgDiagramComponent, initializeModel, provideNgDiagram, type DiagramModel } from 'ng-diagram';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -70,23 +65,23 @@ export class GraphComponent implements OnInit {
           this.model = initializeModel({
             nodes: graph.nodes.map((n, idx) => ({
               id: n.id,
-            position: pos.get(n.id) ?? fallbackPosition(idx),
-            data: { label: n.name, type: n.type, status: n.status },
-          })),
-          edges: graph.links.map((l, idx) => ({
-            id: l.id ?? `edge-${idx}`,
-            source: l.source,
-            target: l.target,
-            data: { label: l.label ?? '', channel: l.channel ?? '' },
-          })),
-        });
-        this.error = undefined;
-      },
-      error: (err) => {
-        const detail = err?.message ?? 'unknown error';
-        this.error = `Unable to load graph. Please check your connection and try again. (${detail})`;
-        this.model = initializeModel({ nodes: [], edges: [] });
-      },
-    });
+              position: pos.get(n.id) ?? fallbackPosition(idx),
+              data: { label: n.name, type: n.type, status: n.status },
+            })),
+            edges: graph.links.map((l, idx) => ({
+              id: l.id ?? `edge-${idx}`,
+              source: l.source,
+              target: l.target,
+              data: { label: l.label ?? '', channel: l.channel ?? '' },
+            })),
+          });
+          this.error = undefined;
+        },
+        error: (err) => {
+          const detail = err?.message ?? 'unknown error';
+          this.error = `Unable to load graph. Please check your connection and try again. (${detail})`;
+          this.model = initializeModel({ nodes: [], edges: [] });
+        },
+      });
   }
 }
