@@ -1,0 +1,13 @@
+/* Required: ng-diagram CSS variables and base styles */
+@import 'ng-diagram/styles.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}

@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "orchestrator",   "name": "Orchestrator",   "type": "agent",  "status": "healthy" },
+    { "id": "planner",        "name": "Planner",        "type": "agent",  "status": "healthy" },
+    { "id": "executor",       "name": "Executor",       "type": "agent",  "status": "warn"    },
+    { "id": "knowledge-base", "name": "Knowledge Base", "type": "module", "status": "healthy" },
+    { "id": "event-bus",      "name": "Event Bus",      "type": "broker", "status": "healthy" }
+  ],
+  "links": [
+    { "id": "l1", "source": "orchestrator",  "target": "planner",        "label": "delegates", "channel": "HTTP"   },
+    { "id": "l2", "source": "planner",       "target": "executor",       "label": "tasks",     "channel": "events" },
+    { "id": "l3", "source": "executor",      "target": "knowledge-base", "label": "queries",   "channel": "gRPC"   },
+    { "id": "l4", "source": "planner",       "target": "knowledge-base", "label": "context",   "channel": "JDBC"   },
+    { "id": "l5", "source": "orchestrator",  "target": "event-bus",      "label": "publish",   "channel": "Kafka"  },
+    { "id": "l6", "source": "event-bus",     "target": "executor",       "label": "consume",   "channel": "Kafka"  }
+  ],
+  "layoutHints": [
+    { "id": "orchestrator",   "x": 100, "y": 80  },
+    { "id": "planner",        "x": 320, "y": 80  },
+    { "id": "executor",       "x": 540, "y": 80  },
+    { "id": "knowledge-base", "x": 540, "y": 240 },
+    { "id": "event-bus",      "x": 320, "y": 240 }
+  ]
+}
