@@ -1,24 +1,111 @@
 {
-  "nodes": [
-    { "id": "orchestrator", "name": "Orchestrator", "type": "agent", "status": "healthy" },
-    { "id": "planner", "name": "Planner", "type": "agent", "status": "healthy" },
-    { "id": "executor", "name": "Executor", "type": "agent", "status": "warn" },
-    { "id": "knowledge-base", "name": "Knowledge Base", "type": "module", "status": "healthy" },
-    { "id": "event-bus", "name": "Event Bus", "type": "broker", "status": "healthy" }
+  "version": "1.0",
+  "entities": [
+    {
+      "id": "employee",
+      "label": "Employee",
+      "type": "entity",
+      "status": "healthy",
+      "layoutHint": { "x": 180, "y": 140 },
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.example.hr.domain",
+        "tableName": "employees",
+        "idField": "id",
+        "description": "Core workforce record that belongs to one department and owns one salary aggregate.",
+        "annotations": ["@Entity", "@Table(name = \"employees\")"],
+        "businessRules": [
+          "Every employee must belong to a department.",
+          "Salary is managed as a dedicated aggregate."
+        ],
+        "fields": [
+          { "name": "id", "type": "Long", "column": "id", "id": true, "nullable": false },
+          { "name": "employeeNumber", "type": "String", "column": "employee_number", "nullable": false, "unique": true },
+          { "name": "fullName", "type": "String", "column": "full_name", "nullable": false },
+          { "name": "department", "type": "Department", "column": "department_id", "nullable": false },
+          { "name": "salary", "type": "Salary", "nullable": false }
+        ]
+      }
+    },
+    {
+      "id": "department",
+      "label": "Department",
+      "type": "entity",
+      "status": "healthy",
+      "layoutHint": { "x": 460, "y": 140 },
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.example.hr.domain",
+        "tableName": "departments",
+        "idField": "id",
+        "description": "Organizational unit that groups employees and exposes a manager reference.",
+        "annotations": ["@Entity", "@Table(name = \"departments\")"],
+        "businessRules": [
+          "A department can contain many employees.",
+          "Department names must be unique."
+        ],
+        "fields": [
+          { "name": "id", "type": "Long", "column": "id", "id": true, "nullable": false },
+          { "name": "name", "type": "String", "column": "name", "nullable": false, "unique": true },
+          { "name": "costCenter", "type": "String", "column": "cost_center", "nullable": false },
+          { "name": "employees", "type": "List<Employee>", "nullable": true }
+        ]
+      }
+    },
+    {
+      "id": "salary",
+      "label": "Salary",
+      "type": "entity",
+      "status": "healthy",
+      "layoutHint": { "x": 740, "y": 140 },
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.example.hr.domain",
+        "tableName": "salaries",
+        "idField": "id",
+        "description": "Compensation aggregate linked one-to-one with an employee.",
+        "annotations": ["@Entity", "@Table(name = \"salaries\")"],
+        "businessRules": ["Each employee has at most one active salary record."],
+        "fields": [
+          { "name": "id", "type": "Long", "column": "id", "id": true, "nullable": false },
+          { "name": "baseAmount", "type": "BigDecimal", "column": "base_amount", "nullable": false },
+          { "name": "currency", "type": "String", "column": "currency", "nullable": false },
+          { "name": "effectiveFrom", "type": "LocalDate", "column": "effective_from", "nullable": false },
+          { "name": "employee", "type": "Employee", "column": "employee_id", "nullable": false, "unique": true }
+        ]
+      }
+    }
   ],
-  "links": [
-    { "id": "l1", "source": "orchestrator", "target": "planner", "label": "delegates", "channel": "HTTP" },
-    { "id": "l2", "source": "planner", "target": "executor", "label": "tasks", "channel": "events" },
-    { "id": "l3", "source": "executor", "target": "knowledge-base", "label": "queries", "channel": "gRPC" },
-    { "id": "l4", "source": "planner", "target": "knowledge-base", "label": "context", "channel": "JDBC" },
-    { "id": "l5", "source": "orchestrator", "target": "event-bus", "label": "publish", "channel": "Kafka" },
-    { "id": "l6", "source": "event-bus", "target": "executor", "label": "consume", "channel": "Kafka" }
-  ],
-  "layoutHints": [
-    { "id": "orchestrator", "x": 100, "y": 80 },
-    { "id": "planner", "x": 320, "y": 80 },
-    { "id": "executor", "x": 540, "y": 80 },
-    { "id": "knowledge-base", "x": 540, "y": 240 },
-    { "id": "event-bus", "x": 320, "y": 240 }
+  "relationships": [
+    {
+      "id": "employee-department",
+      "source": "employee",
+      "target": "department",
+      "label": "@ManyToOne",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "ManyToOne",
+        "sourceField": "department",
+        "targetField": "employees",
+        "cardinality": "N:1",
+        "owningSide": true,
+        "fetch": "LAZY"
+      }
+    },
+    {
+      "id": "employee-salary",
+      "source": "employee",
+      "target": "salary",
+      "label": "@OneToOne",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToOne",
+        "sourceField": "salary",
+        "targetField": "employee",
+        "cardinality": "1:1",
+        "owningSide": true,
+        "fetch": "LAZY"
+      }
+    }
   ]
 }

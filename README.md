@@ -1,89 +1,191 @@
-# Agent Workflow – Communication Graphs
+# JPA Domain Model Diagram Viewer
 
-Initial architecture and API spec for visualizing AI agent or Spring Modulith module communication flows with **ngdiagram**. The goal is to provide a simple, mock-data backed graph API that the UI can render as nodes (agents/modules) and links (messages/relations).
+This repository renders a backend-provided domain model in **ng-diagram** and exposes entity details in a right-hand properties sidebar.
 
-## Architecture (high level)
-- **Spring Modulith backend**  
-  - `GraphController` exposes read-only REST endpoints (`/api/graph`) that return graph JSON.  
-  - `GraphService` aggregates mock data now; later it can read Modulith structural metadata (applications/modules), observability traces, or event log streams.
-- **Graph domain model**  
-  - `Node` (id, name, type=`agent|module|broker`, status, metadata).  
-  - `Link` (id, source, target, label, channel, latencyMs, meta).  
-  - `LayoutHint` (optional x/y for deterministic layouts when desired).
-- **ngdiagram front-end**  
-  - Consumes `/api/graph` payload, mapping `Node` to diagram shapes and `Link` to connectors.  
-  - Uses `type` to style shapes (e.g., agents = rounded rectangles, modules = hexagons, brokers = circles).  
-  - Uses `status` to set color (healthy/warn/offline).
+Current focus:
+- backend contract for JPA entities and relationships
+- live diagram rendering over REST + WebSocket
+- entity inspection in a sidebar
+- sample domain: `Employee`, `Department`, `Salary`
 
-## API Spec (mocked)
-Base URL: `/api/graph`
+## Architecture
 
-### GET `/api/graph`
-Returns the current communication graph (agents + modules). Suitable for ngdiagram consumption.
+- `mcp-server/`
+  - Node.js + TypeScript
+  - validates incoming payloads with `zod`
+  - stores the latest in-memory snapshot
+  - serves `GET /api/diagram`
+  - broadcasts updates over `ws://localhost:3100/ws/diagram`
+- `ngdiagram-app/`
+  - Angular 18 + `ng-diagram`
+  - loads the initial graph from `/api/diagram`
+  - listens for WebSocket updates
+  - renders the model and a properties sidebar
 
-Query params (optional):
-- `view` – `agents` | `modules` | `all` (default `all`)
-- `includeLayout` – `true|false` (default `false`)
+## Domain Model Payload
 
-Response: `200 OK`
+The server now expects JPA-oriented metadata rather than generic node blobs.
+
+### Entity shape
+
 ```json
 {
-  "nodes": [
-    {"id": "orchestrator", "name": "Orchestrator", "type": "agent", "status": "healthy"},
-    {"id": "planner", "name": "Planner", "type": "agent", "status": "healthy"},
-    {"id": "executor", "name": "Executor", "type": "agent", "status": "warn"},
-    {"id": "knowledge-base", "name": "Knowledge Base", "type": "module", "status": "healthy"},
-    {"id": "event-bus", "name": "Event Bus", "type": "broker", "status": "healthy"}
-  ],
-  "links": [
-    {"id": "l1", "source": "orchestrator", "target": "planner", "label": "delegates", "channel": "HTTP"},
-    {"id": "l2", "source": "planner", "target": "executor", "label": "tasks", "channel": "events"},
-    {"id": "l3", "source": "executor", "target": "knowledge-base", "label": "queries", "channel": "gRPC"},
-    {"id": "l4", "source": "planner", "target": "knowledge-base", "label": "context", "channel": "JDBC"},
-    {"id": "l5", "source": "orchestrator", "target": "event-bus", "label": "publish", "channel": "Kafka"},
-    {"id": "l6", "source": "event-bus", "target": "executor", "label": "consume", "channel": "Kafka"}
-  ],
-  "layoutHints": [
-    {"id": "orchestrator", "x": 100, "y": 80},
-    {"id": "planner", "x": 320, "y": 80},
-    {"id": "executor", "x": 540, "y": 80},
-    {"id": "knowledge-base", "x": 540, "y": 240},
-    {"id": "event-bus", "x": 320, "y": 240}
-  ]
+  "id": "employee",
+  "label": "Employee",
+  "type": "entity",
+  "status": "healthy",
+  "layoutHint": { "x": 180, "y": 140 },
+  "metadata": {
+    "kind": "jpa-entity",
+    "packageName": "com.example.hr.domain",
+    "tableName": "employees",
+    "idField": "id",
+    "description": "Core workforce record.",
+    "annotations": ["@Entity", "@Table(name = \"employees\")"],
+    "businessRules": ["Every employee must belong to a department."],
+    "fields": [
+      {
+        "name": "id",
+        "type": "Long",
+        "column": "id",
+        "id": true,
+        "nullable": false
+      },
+      {
+        "name": "department",
+        "type": "Department",
+        "column": "department_id",
+        "nullable": false
+      }
+    ]
+  }
 }
 ```
 
-Error responses:
-- `400` – unsupported `view`
-- `500` – server errors
+### Relationship shape
 
-### Future endpoints (optional)
-- `GET /api/graph/modules/{moduleId}` – drill-down on a single Modulith module’s intra-module interactions.
-- `GET /api/graph/events?fromTs=&toTs=` – time-windowed communication slices for playback in ngdiagram.
+```json
+{
+  "id": "employee-department",
+  "source": "employee",
+  "target": "department",
+  "label": "@ManyToOne",
+  "channel": "JPA",
+  "metadata": {
+    "relationType": "ManyToOne",
+    "sourceField": "department",
+    "targetField": "employees",
+    "cardinality": "N:1",
+    "owningSide": true,
+    "fetch": "LAZY"
+  }
+}
+```
 
-## ngdiagram rendering notes
-- Use `nodes` as diagram shapes; map `type` to shape/icon and `status` to color.  
-- Use `links` as connectors; map `channel` to line style (solid HTTP, dashed async, dotted broker).  
-- If `layoutHints` is present and `includeLayout=true`, seed diagram coordinates for reproducible layouts; otherwise allow ngdiagram’s auto layout.
+### Validation rules
 
-## Reference implementation (ng-diagram v1.0.0, Angular 18+)
-Use **ng-diagram v1.0.0** with Angular standalone components and the library’s `initializeModel` helper. A full runnable Angular app lives in [`ngdiagram-app`](./ngdiagram-app) with the graph UI in [`src/app/graph/graph.component.ts`](./ngdiagram-app/src/app/graph/graph.component.ts). A mock API server (Node.js built-ins only, no external npm deps) is provided in [`mock-server.js`](./mock-server.js).
+- `entities` must be non-empty
+- relationship `source` and `target` must reference existing entities
+- entity metadata must match the JPA schema
+- relationship metadata must use one of:
+  - `OneToOne`
+  - `OneToMany`
+  - `ManyToOne`
+  - `ManyToMany`
+
+Validation lives in [contracts.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/contracts.ts).
+
+## Sample Domain
+
+The server boots with a default sample domain in [server.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/server.ts):
+
+- `Employee`
+- `Department`
+- `Salary`
+
+Sample payload is also stored in [graph-mock.json](/Users/mehdi/MyProject/elegent-spring-diagram/graph-mock.json).
+
+Relationships in the sample:
+- `Employee -> Department` via `@ManyToOne`
+- `Employee -> Salary` via `@OneToOne`
+
+## UI Behavior
+
+The Angular graph view is implemented in [graph.component.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/graph.component.ts).
+
+Current behavior:
+- entities render as selectable nodes
+- a minimap appears after `diagramInit`
+- clicking an entity opens the right sidebar
+- sidebar shows:
+  - description
+  - table name
+  - package
+  - primary key
+  - annotations
+  - fields
+  - business rules
+  - relationships connected to that entity
+
+The sidebar currently uses entity selection as the main inspection path for relationships. Relationship metadata is shown inside the selected entity’s `Relationships` section.
+
+## Run Locally
+
+Terminal A:
 
 ```bash
-# Install and run mock API (serves /api/graph)
-node mock-server.js
+cd mcp-server
+npm install
+npm run dev
+```
 
-# Install and run Angular app (with dev proxy to /api)
+Terminal B:
+
+```bash
 cd ngdiagram-app
 npm install
 npm start
-# open http://localhost:4200 (dev server proxies /api to 3000)
 ```
 
-Style import (already wired): `ngdiagram-app/src/styles.scss` imports `ng-diagram/styles.css`.
+Open:
 
-Mock API response for local dev lives in [`graph-mock.json`](./graph-mock.json); it is served by `mock-server.js`.
+```bash
+http://localhost:4200
+```
 
-## Next steps
-- Replace mock data with Modulith metadata (Spring Modulith `ApplicationModules`) and tracing data.  
-- Add WebSocket/SSE push from the backend to stream updates to ngdiagram for near-real-time graphs.
+## Post Your Own Domain Model
+
+```bash
+curl -X POST http://localhost:3100/api/diagram \
+  -H 'Content-Type: application/json' \
+  -d @graph-mock.json
+```
+
+Or send a custom payload with your own JPA entities and relations.
+
+## API Surface
+
+- `GET /health`
+- `GET /api/diagram`
+- `POST /api/diagram`
+- `WS /ws/diagram`
+
+## Key Files
+
+- [server.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/server.ts)
+- [contracts.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/contracts.ts)
+- [graph.component.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/graph.component.ts)
+- [diagram-api.service.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/services/diagram-api.service.ts)
+- [graph-mock.json](/Users/mehdi/MyProject/elegent-spring-diagram/graph-mock.json)
+
+## Current Limitations
+
+- direct edge-click relationship selection is not the primary interaction path yet
+- the Angular build emits a non-blocking component style budget warning for the graph component
+- persistence is still in-memory only
+
+## Suggested Next Steps
+
+1. Add explicit edge selection UX and relationship-only sidebar view.
+2. Add Spring Boot sample producer code for scanning JPA metadata and posting this payload.
+3. Persist snapshots so the latest domain model survives restarts.
