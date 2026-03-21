@@ -1,0 +1,113 @@
+<c-sidebar
+  #sidebar1="cSidebar"
+  class="d-print-none sidebar sidebar-fixed border-end"
+  colorScheme="dark"
+  id="sidebar1"
+  visible
+>
+  <c-sidebar-header class="border-bottom">
+    <c-sidebar-brand [routerLink]="[]">
+      <svg [class]="{icon: false}" cIcon class="sidebar-brand-full" height="32" name="logo" title="CoreUI Logo"></svg>
+      <svg cIcon class="sidebar-brand-narrow" height="32" name="signet" title="CoreUI Logo"></svg>
+    </c-sidebar-brand>
+  </c-sidebar-header>
+
+  <ng-scrollbar pointerEventsMethod="scrollbar" visibility="hover">
+    <c-sidebar-nav [navItems]="navItems" dropdownMode="close" compact />
+  </ng-scrollbar>
+
+  @if (!sidebar1.narrow) {
+    <c-sidebar-footer class="border-top d-none d-lg-flex sidebar-footer-coreui">
+      <button
+        [cSidebarToggle]="'sidebar1'"
+        aria-label="Collapse sidebar"
+        class="sidebar-fold-button"
+        toggle="unfoldable"
+        type="button"
+      >
+        <svg cIcon name="cilChevronLeft"></svg>
+      </button>
+    </c-sidebar-footer>
+  } @else {
+    <c-sidebar-footer class="border-top d-none d-lg-flex sidebar-footer-coreui">
+      <button
+        [cSidebarToggle]="'sidebar1'"
+        aria-label="Expand sidebar"
+        class="sidebar-fold-button"
+        toggle="unfoldable"
+        type="button"
+      >
+        <svg cIcon name="cilChevronRight"></svg>
+      </button>
+    </c-sidebar-footer>
+  }
+</c-sidebar>
+
+<div class="wrapper d-flex flex-column min-vh-100">
+  <app-default-header
+    [cShadowOnScroll]="'sm'"
+    class="mb-4 d-print-none header header-sticky p-0 shadow-sm"
+    position="sticky"
+    sidebarId="sidebar1"
+  />
+  <div class="body flex-grow-1">
+    <c-container breakpoint="lg" class="h-auto px-4">
+      <router-outlet />
+    </c-container>
+  </div>
+  <app-default-footer />
+</div>
+
+<button
+  (click)="openChat()"
+  aria-label="Open AI chat client"
+  cButton
+  class="ai-chat-launcher shadow"
+  color="primary"
+  shape="rounded-pill"
+  type="button"
+>
+  <svg cIcon class="me-2" name="cilCommentSquare"></svg>
+  AI Chat
+</button>
+
+<c-offcanvas
+  (visibleChange)="isChatOpen = $event"
+  [scroll]="true"
+  [visible]="isChatOpen"
+  class="ai-chat-offcanvas"
+  id="ai-chat-client"
+  placement="end"
+>
+  <c-offcanvas-header>
+    <div>
+      <div class="text-body-secondary text-uppercase small fw-semibold">Assistant</div>
+      <h5 cOffcanvasTitle class="mb-0">AI Chat Client</h5>
+    </div>
+    <button (click)="closeChat()" aria-label="Close AI chat client" cButtonClose type="button"></button>
+  </c-offcanvas-header>
+
+  <c-offcanvas-body class="ai-chat-body">
+    <div class="ai-chat-thread">
+      @for (message of chatMessages; track $index) {
+        <div class="ai-chat-message" [class.ai-chat-message--user]="message.role === 'user'">
+          <div class="ai-chat-message__role">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
+          <div class="ai-chat-message__text">{{ message.text }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="ai-chat-composer">
+      <textarea
+        [(ngModel)]="draftMessage"
+        class="form-control"
+        placeholder="Ask about the diagram or request a change..."
+        rows="3"
+      ></textarea>
+      <button (click)="sendMessage()" cButton color="primary" type="button">
+        <svg cIcon class="me-2" name="cilPaperPlane"></svg>
+        Send
+      </button>
+    </div>
+  </c-offcanvas-body>
+</c-offcanvas>

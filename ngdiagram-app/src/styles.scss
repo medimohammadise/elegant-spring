@@ -1,2 +1,17 @@
-/* You can add global styles to this file, and also import other style files */
+@import '@coreui/coreui/dist/css/coreui.min.css';
 @import 'ng-diagram/styles.css';
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--cui-font-sans-serif);
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}

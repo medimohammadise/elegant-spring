@@ -1,13 +1,53 @@
-import { Component } from '@angular/core';
-import { GraphComponent } from './graph/graph.component';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Title } from '@angular/platform-browser';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { delay, filter, map, tap } from 'rxjs/operators';
+import { ColorModeService } from '@coreui/angular';
+import { IconSetService } from '@coreui/icons-angular';
+import { iconSubset } from './icons/icon-subset';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [GraphComponent],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
+  imports: [RouterOutlet],
+  template: '<router-outlet />',
 })
-export class AppComponent {
-  title = 'ngdiagram-app';
+export class AppComponent implements OnInit {
+  title = 'CoreUI Angular Admin Template';
+
+  readonly #destroyRef: DestroyRef = inject(DestroyRef);
+  readonly #activatedRoute = inject(ActivatedRoute);
+  readonly #router = inject(Router);
+  readonly #colorModeService = inject(ColorModeService);
+
+  constructor(
+    private readonly titleService: Title,
+    private readonly iconSetService: IconSetService,
+  ) {
+    this.titleService.setTitle(this.title);
+    this.iconSetService.icons = { ...iconSubset };
+    this.#colorModeService.localStorageItemName.set('coreui-free-angular-admin-template-theme-default');
+    this.#colorModeService.eventName.set('ColorSchemeChange');
+  }
+
+  ngOnInit(): void {
+    this.#router.events.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((evt) => {
+      if (!(evt instanceof NavigationEnd)) {
+        return;
+      }
+    });
+
+    this.#activatedRoute.queryParams
+      .pipe(
+        delay(1),
+        map((params) => <string>params['theme']?.match(/^[A-Za-z0-9\s]+/)?.[0]),
+        filter((theme) => ['dark', 'light', 'auto'].includes(theme)),
+        tap((theme) => {
+          this.#colorModeService.colorMode.set(theme);
+        }),
+        takeUntilDestroyed(this.#destroyRef),
+      )
+      .subscribe();
+  }
 }

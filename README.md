@@ -1,6 +1,6 @@
 # JPA Domain Model Diagram Viewer
 
-This repository renders a backend-provided domain model in **ng-diagram** and exposes entity details in a right-hand properties sidebar.
+This repository renders a backend-provided domain model in **ng-diagram** inside a **CoreUI Angular admin shell** and exposes entity details in a right-hand properties panel.
 
 Current focus:
 - backend contract for JPA entities and relationships
@@ -17,7 +17,10 @@ Current focus:
   - serves `GET /api/diagram`
   - broadcasts updates over `ws://localhost:3100/ws/diagram`
 - `ngdiagram-app/`
-  - Angular 18 + `ng-diagram`
+  - Angular 18 + CoreUI + `ng-diagram`
+  - CoreUI dashboard shell with sidebar, top navigation, breadcrumbs, and footer
+  - dedicated `Domain Model` route for the entity diagram
+  - floating bottom-right `AI Chat` client launcher
   - loads the initial graph from `/api/diagram`
   - listens for WebSocket updates
   - renders the model and a properties sidebar
@@ -114,6 +117,15 @@ Relationships in the sample:
 The Angular graph view is implemented in [graph.component.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/graph.component.ts).
 
 Current behavior:
+- the app opens inside a CoreUI dashboard layout
+- top bar includes:
+  - `Dashboard`
+  - `Users`
+  - `Settings`
+- sidebar includes:
+  - `Dashboard`
+  - `Domain Model`
+- a bottom-right `AI Chat` launcher opens a CoreUI offcanvas assistant panel
 - entities render as selectable nodes
 - a minimap appears after `diagramInit`
 - clicking an entity opens the right sidebar
@@ -128,6 +140,17 @@ Current behavior:
   - relationships connected to that entity
 
 The sidebar currently uses entity selection as the main inspection path for relationships. Relationship metadata is shown inside the selected entity’s `Relationships` section.
+
+## Routes
+
+- `/#/dashboard`
+  - CoreUI starter-style dashboard page
+- `/#/domain-model`
+  - NgDiagram entity view in a CoreUI-standardized workspace
+- `/#/users`
+  - placeholder page
+- `/#/settings`
+  - placeholder page
 
 ## Run Locally
 
@@ -174,6 +197,9 @@ Or send a custom payload with your own JPA entities and relations.
 
 - [server.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/server.ts)
 - [contracts.ts](/Users/mehdi/MyProject/elegent-spring-diagram/mcp-server/src/contracts.ts)
+- [app.routes.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/app.routes.ts)
+- [default-layout.component.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/layout/default-layout/default-layout.component.ts)
+- [default-header.component.html](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/layout/default-layout/default-header/default-header.component.html)
 - [graph.component.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/graph.component.ts)
 - [diagram-api.service.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/services/diagram-api.service.ts)
 - [graph-mock.json](/Users/mehdi/MyProject/elegent-spring-diagram/graph-mock.json)
@@ -182,6 +208,7 @@ Or send a custom payload with your own JPA entities and relations.
 
 - direct edge-click relationship selection is not the primary interaction path yet
 - the Angular build emits a non-blocking component style budget warning for the graph component
+- the CoreUI layout shell currently uses placeholder pages for `Users` and `Settings`
 - persistence is still in-memory only
 
 ## Suggested Next Steps

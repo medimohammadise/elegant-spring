@@ -8,6 +8,7 @@ import {
   type Edge,
   NgDiagramMinimapComponent,
   NgDiagramSelectionService,
+  NgDiagramViewportService,
   type Node,
   initializeModel,
   provideNgDiagram,
@@ -45,26 +46,36 @@ type DiagramEdgeData = {
   providers: [provideNgDiagram()],
   template: `
     <div class="graph-shell">
-      <section class="diagram-stage">
-        <div class="error" *ngIf="error">{{ error }}</div>
-        <div class="empty-state" *ngIf="!error && !hasNodes">
-          <div class="empty-state-card">
-            <strong>Waiting for domain model data</strong>
-            <p>POST JPA entities and relationships to <code>/api/diagram</code> to render the model.</p>
+      <section class="panel panel--diagram">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Workspace</p>
+            <h3>Entity Diagram</h3>
           </div>
+          <p class="panel__summary">Inspect entities, relationships, and live updates in a standard CoreUI workspace.</p>
         </div>
-        <ng-diagram [model]="model" (diagramInit)="diagramReady = true">
-          <ng-diagram-background type="dots"></ng-diagram-background>
-          <ng-diagram-minimap
-            *ngIf="diagramReady"
-            position="bottom-right"
-            [width]="220"
-            [height]="140"
-          ></ng-diagram-minimap>
-        </ng-diagram>
+
+        <div class="diagram-stage">
+          <div class="error" *ngIf="error">{{ error }}</div>
+          <div class="empty-state" *ngIf="!error && !hasNodes">
+            <div class="empty-state-card">
+              <strong>Waiting for domain model data</strong>
+              <p>POST JPA entities and relationships to <code>/api/diagram</code> to render the model.</p>
+            </div>
+          </div>
+          <ng-diagram [model]="model" (diagramInit)="diagramReady = true">
+            <ng-diagram-background type="dots"></ng-diagram-background>
+            <ng-diagram-minimap
+              *ngIf="diagramReady"
+              position="bottom-right"
+              [width]="220"
+              [height]="140"
+            ></ng-diagram-minimap>
+          </ng-diagram>
+        </div>
       </section>
 
-      <aside class="sidebar">
+      <aside class="panel panel--sidebar">
         <ng-container *ngIf="selectedEntity(); else relationshipOrEmpty">
           <div class="sidebar__header">
             <span class="eyebrow">JPA Entity</span>
@@ -203,69 +214,110 @@ type DiagramEdgeData = {
       :host {
         display: flex;
         flex: 1 1 auto;
-        min-height: 640px;
+        min-height: 0;
       }
 
       .graph-shell {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 340px;
-        gap: 14px;
+        gap: 1rem;
         flex: 1 1 auto;
-        min-height: 640px;
+        min-height: 0;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border: 1px solid var(--cui-border-color);
+        border-radius: var(--cui-border-radius-lg);
+        background: var(--cui-card-bg);
+        box-shadow: var(--cui-box-shadow-sm);
+      }
+
+      .panel__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 1rem 0;
+      }
+
+      .panel__eyebrow {
+        margin: 0 0 0.25rem;
+        color: var(--cui-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .panel__header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .panel__summary {
+        max-width: 22rem;
+        margin: 0;
+        color: var(--cui-secondary-color);
+        font-size: 0.875rem;
+        line-height: 1.5;
+        text-align: right;
       }
 
       .diagram-stage {
         position: relative;
         display: flex;
-        min-height: 640px;
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(15, 23, 42, 0.98));
+        min-height: 620px;
+        margin: 1rem;
+        border: 1px solid var(--cui-border-color-translucent);
+        border-radius: var(--cui-border-radius-lg);
+        background: linear-gradient(180deg, #fff, #f8fafc);
         overflow: hidden;
       }
 
       ng-diagram {
         flex: 1 1 auto;
-        --ngd-diagram-background-color: rgba(248, 250, 252, 0.98);
-        --ngd-minimap-background: rgba(255, 255, 255, 0.96);
-        --ngd-minimap-border-color: rgba(148, 163, 184, 0.3);
-        --ngd-default-edge-stroke: #2563eb;
+        min-width: 0;
+        --ngd-diagram-background-color: #ffffff;
+        --ngd-minimap-background: rgba(255, 255, 255, 0.98);
+        --ngd-minimap-border-color: rgba(148, 163, 184, 0.35);
+        --ngd-default-edge-stroke: var(--cui-primary);
         --ngd-default-edge-stroke-hover: #1d4ed8;
         --ngd-default-edge-stroke-selected: #0f172a;
       }
 
-      .sidebar {
+      .panel--sidebar {
         display: flex;
         flex-direction: column;
-        gap: 18px;
-        padding: 18px;
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        background: rgba(15, 23, 42, 0.88);
-        color: #e2e8f0;
+        gap: 1rem;
+        padding: 1rem;
+        min-height: 620px;
         overflow: auto;
       }
 
       .sidebar__header h2,
       .sidebar__empty h2 {
         margin: 8px 0 6px;
-        font-size: 1.45rem;
+        font-size: 1.25rem;
       }
 
       .sidebar__header p,
       .sidebar__empty p {
         margin: 0;
-        color: #94a3b8;
+        color: var(--cui-secondary-color);
         line-height: 1.5;
       }
 
       .eyebrow {
         display: inline-flex;
         align-self: flex-start;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        border: 1px solid rgba(125, 211, 252, 0.45);
-        color: #67e8f9;
+        padding: 0.2rem 0.5rem;
+        border-radius: 50rem;
+        border: 1px solid rgba(13, 110, 253, 0.2);
+        background: rgba(13, 110, 253, 0.08);
+        color: var(--cui-primary);
         font-size: 0.72rem;
         letter-spacing: 0.05em;
         text-transform: uppercase;
@@ -280,6 +332,7 @@ type DiagramEdgeData = {
       .sidebar__section h3 {
         margin: 0;
         font-size: 0.95rem;
+        color: var(--cui-body-color);
       }
 
       .info-grid {
@@ -291,15 +344,15 @@ type DiagramEdgeData = {
       .info-grid > div,
       .list-card {
         padding: 12px;
-        border-radius: 14px;
-        background: rgba(30, 41, 59, 0.74);
-        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: var(--cui-border-radius);
+        background: var(--cui-tertiary-bg);
+        border: 1px solid var(--cui-border-color-translucent);
       }
 
       .label {
         display: block;
         margin-bottom: 6px;
-        color: #94a3b8;
+        color: var(--cui-secondary-color);
         font-size: 0.72rem;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -315,7 +368,7 @@ type DiagramEdgeData = {
       .list-card__meta {
         margin-top: 6px;
         flex-wrap: wrap;
-        color: #94a3b8;
+        color: var(--cui-secondary-color);
         font-size: 0.82rem;
       }
 
@@ -327,17 +380,17 @@ type DiagramEdgeData = {
 
       .chip {
         padding: 0.32rem 0.58rem;
-        border-radius: 999px;
-        background: rgba(37, 99, 235, 0.14);
-        border: 1px solid rgba(96, 165, 250, 0.28);
-        color: #bfdbfe;
+        border-radius: 50rem;
+        background: rgba(13, 110, 253, 0.08);
+        border: 1px solid rgba(13, 110, 253, 0.16);
+        color: var(--cui-primary);
         font-size: 0.8rem;
       }
 
       .rules {
         margin: 0;
         padding-left: 1.1rem;
-        color: #cbd5e1;
+        color: var(--cui-body-color);
       }
 
       .error {
@@ -347,9 +400,9 @@ type DiagramEdgeData = {
         max-width: 440px;
         padding: 8px 12px;
         border-radius: 10px;
-        border: 1px solid rgba(252, 165, 165, 0.4);
-        background: rgba(69, 10, 10, 0.88);
-        color: #fecaca;
+        border: 1px solid rgba(220, 53, 69, 0.24);
+        background: rgba(255, 243, 245, 0.98);
+        color: #842029;
         font-size: 14px;
         z-index: 10;
       }
@@ -360,7 +413,7 @@ type DiagramEdgeData = {
         display: grid;
         place-items: center;
         padding: 24px;
-        color: #cbd5e1;
+        color: var(--cui-body-color);
         text-align: center;
         pointer-events: none;
         z-index: 1;
@@ -369,10 +422,21 @@ type DiagramEdgeData = {
       .empty-state-card {
         max-width: 420px;
         padding: 18px 20px;
-        border-radius: 16px;
-        border: 1px solid rgba(148, 163, 184, 0.22);
-        background: rgba(15, 23, 42, 0.72);
-        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.35);
+        border-radius: var(--cui-border-radius-lg);
+        border: 1px solid var(--cui-border-color);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: var(--cui-box-shadow-sm);
+      }
+
+      .empty-state-card p {
+        margin: 0.5rem 0 0;
+        color: var(--cui-secondary-color);
+      }
+
+      .empty-state-card code {
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.35rem;
+        background: var(--cui-secondary-bg);
       }
 
       @media (max-width: 1100px) {
@@ -380,9 +444,17 @@ type DiagramEdgeData = {
           grid-template-columns: 1fr;
         }
 
+        .panel__header {
+          flex-direction: column;
+        }
+
+        .panel__summary {
+          max-width: none;
+          text-align: left;
+        }
+
         .diagram-stage,
-        .sidebar,
-        :host {
+        .panel--sidebar {
           min-height: 480px;
         }
       }
@@ -394,6 +466,7 @@ export class GraphComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly api = inject(DiagramApiService);
   private readonly selectionService = inject(NgDiagramSelectionService);
+  private readonly viewportService = inject(NgDiagramViewportService);
 
   model = initializeModel({ nodes: [], edges: [] }, this.injector);
   graphState = signal<DiagramResponse | undefined>(undefined);
@@ -444,6 +517,9 @@ export class GraphComponent implements OnInit {
       );
 
       this.error = undefined;
+      setTimeout(() => {
+        this.viewportService.zoomToFit({ padding: [80, 120, 80, 120] });
+      }, 150);
     };
 
     this.api
