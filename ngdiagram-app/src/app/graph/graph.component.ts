@@ -6,14 +6,19 @@ import {
   NgDiagramBackgroundComponent,
   NgDiagramComponent,
   type Edge,
+  NgDiagramEdgeTemplateMap,
   NgDiagramMinimapComponent,
+  NgDiagramNodeTemplateMap,
   NgDiagramSelectionService,
   NgDiagramViewportService,
   type Node,
   initializeModel,
   provideNgDiagram,
 } from 'ng-diagram';
-import { DiagramApiService, type DiagramNode, type DiagramResponse } from './services/diagram-api.service';
+import { DiagramApiService, type DiagramNode, type DiagramResponse, type DiagramLink } from './services/diagram-api.service';
+import { RelationshipEdgeComponent } from './relationship-edge.component';
+import { EntityNodeComponent } from './nodes/entity-node.component';
+import { getRelationshipEdgeType } from './relationship-edge-styles';
 
 const DEFAULT_POSITION_SPREAD = 220;
 const fallbackPosition = (idx: number) => ({
@@ -42,7 +47,7 @@ type DiagramEdgeData = {
 @Component({
   selector: 'app-graph',
   standalone: true,
-  imports: [CommonModule, NgDiagramComponent, NgDiagramBackgroundComponent, NgDiagramMinimapComponent],
+  imports: [CommonModule, NgDiagramComponent, NgDiagramBackgroundComponent, NgDiagramMinimapComponent, RelationshipEdgeComponent, EntityNodeComponent],
   providers: [provideNgDiagram()],
   template: `
     <div class="graph-shell">
@@ -63,7 +68,7 @@ type DiagramEdgeData = {
               <p>POST JPA entities and relationships to <code>/api/diagram</code> to render the model.</p>
             </div>
           </div>
-          <ng-diagram [model]="model" (diagramInit)="diagramReady = true">
+          <ng-diagram [model]="model" [edgeTemplateMap]="edgeTemplateMap" [nodeTemplateMap]="nodeTemplateMap" (diagramInit)="diagramReady = true">
             <ng-diagram-background type="dots"></ng-diagram-background>
             <ng-diagram-minimap
               *ngIf="diagramReady"
@@ -286,6 +291,11 @@ type DiagramEdgeData = {
         --ngd-default-edge-stroke: var(--cui-primary);
         --ngd-default-edge-stroke-hover: #1d4ed8;
         --ngd-default-edge-stroke-selected: #0f172a;
+        /* Cardinality-based edge colors */
+        --cardinality-1-1: #D55E00;
+        --cardinality-1-n: #0072B2;
+        --cardinality-n-1: #009E73;
+        --cardinality-n-m: #CC79A7;
       }
 
       .panel--sidebar {
@@ -468,6 +478,18 @@ export class GraphComponent implements OnInit {
   private readonly selectionService = inject(NgDiagramSelectionService);
   private readonly viewportService = inject(NgDiagramViewportService);
 
+  nodeTemplateMap = new NgDiagramNodeTemplateMap([
+    ['jpa-entity', EntityNodeComponent],
+  ]);
+
+  edgeTemplateMap = new NgDiagramEdgeTemplateMap([
+    ['relationship-one-to-one', RelationshipEdgeComponent],
+    ['relationship-one-to-many', RelationshipEdgeComponent],
+    ['relationship-many-to-one', RelationshipEdgeComponent],
+    ['relationship-many-to-many', RelationshipEdgeComponent],
+    ['relationship-default', RelationshipEdgeComponent],
+  ]);
+
   model = initializeModel({ nodes: [], edges: [] }, this.injector);
   graphState = signal<DiagramResponse | undefined>(undefined);
   selectedNode = computed(() => this.selectionService.selection().nodes[0] as Node<DiagramNodeData> | undefined);
@@ -492,28 +514,48 @@ export class GraphComponent implements OnInit {
       this.hasNodes = graph.nodes.length > 0;
       this.graphState.set(graph);
 
+      // Store relationships globally for node access
+      const allLinks = graph.links;
+
       this.model.updateNodes(
         graph.nodes.map((node, idx) => ({
           id: node.id,
           position: node.position ?? fallbackPosition(idx),
+          type: 'jpa-entity',
           data: {
             label: node.name,
             entity: node,
+            relationships: allLinks,
           },
         })),
       );
 
+      // Create edges with cardinality-based styling
       this.model.updateEdges(
-        graph.links.map((link, idx) => ({
-          id: link.id ?? `edge-${idx}`,
-          source: link.source,
-          target: link.target,
-          data: {
-            label: link.label ?? '',
-            channel: link.channel ?? '',
-            relation: link.metadata,
-          },
-        })),
+        graph.links.map((link, idx) => {
+          // Get edge type based on cardinality
+          const edgeType = getRelationshipEdgeType(link.metadata?.relationType, link.metadata?.cardinality);
+
+          console.log('Creating edge:', {
+            id: link.id,
+            source: link.source,
+            target: link.target,
+            type: edgeType,
+            cardinality: link.metadata?.cardinality,
+          });
+
+          return {
+            id: link.id ?? `edge-${idx}`,
+            source: link.source,
+            target: link.target,
+            type: edgeType,
+            data: {
+              label: link.label ?? '',
+              channel: link.channel ?? '',
+              relation: link.metadata,
+            },
+          };
+        }),
       );
 
       this.error = undefined;

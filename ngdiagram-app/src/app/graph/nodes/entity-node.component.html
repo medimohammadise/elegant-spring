@@ -1,0 +1,50 @@
+<div class="entity-node" [class.entity-node--selected]="node().selected">
+  <!-- Node Header with Entity Name -->
+  <div class="entity-node__header">
+    <div class="entity-node__icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+        <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2"/>
+        <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="entity-node__info">
+      <h3 class="entity-node__name">{{ entityName() }}</h3>
+      <span class="entity-node__table">{{ tableName() }}</span>
+    </div>
+  </div>
+
+  <!-- Source Ports (outgoing relationships) - Right side -->
+  @for (rel of sourceRelationships(); track rel.id) {
+    <ng-diagram-port
+      [id]="'port-src-' + rel.id"
+      type="source"
+      side="right"
+      [style.top.%]="getSourcePortPosition($index, sourceRelationships().length)"
+      originPoint="centerRight"
+    >
+      <div class="entity-node__port" [ngClass]="getCardinalityClass(rel.metadata?.cardinality, true)">
+        <span class="entity-node__port-label">
+          {{ getCardinalityLabel(rel.metadata?.relationType, rel.metadata?.cardinality, true) }}
+        </span>
+      </div>
+    </ng-diagram-port>
+  }
+
+  <!-- Target Ports (incoming relationships) - Left side -->
+  @for (rel of targetRelationships(); track rel.id) {
+    <ng-diagram-port
+      [id]="'port-tgt-' + rel.id"
+      type="target"
+      side="left"
+      [style.top.%]="getTargetPortPosition($index, targetRelationships().length)"
+      originPoint="centerLeft"
+    >
+      <div class="entity-node__port" [ngClass]="getCardinalityClass(rel.metadata?.cardinality, false)">
+        <span class="entity-node__port-label">
+          {{ getCardinalityLabel(rel.metadata?.relationType, rel.metadata?.cardinality, false) }}
+        </span>
+      </div>
+    </ng-diagram-port>
+  }
+</div>
