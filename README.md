@@ -204,6 +204,16 @@ Or send a custom payload with your own JPA entities and relations.
 - [diagram-api.service.ts](/Users/mehdi/MyProject/elegent-spring-diagram/ngdiagram-app/src/app/graph/services/diagram-api.service.ts)
 - [graph-mock.json](/Users/mehdi/MyProject/elegent-spring-diagram/graph-mock.json)
 
+
+## GitHub Spec Kit
+
+A lightweight spec-first project scaffold now lives in [`github-spec-kit/`](github-spec-kit/):
+
+- [`github-spec-kit/templates/spec-template.md`](github-spec-kit/templates/spec-template.md)
+- [`github-spec-kit/templates/task-checklist.md`](github-spec-kit/templates/task-checklist.md)
+
+Use it to write and review feature specs before implementation PRs, especially when changes span both `mcp-server` and `ngdiagram-app`.
+
 ## Current Limitations
 
 - direct edge-click relationship selection is not the primary interaction path yet
