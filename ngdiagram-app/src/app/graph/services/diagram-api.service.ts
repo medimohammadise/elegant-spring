@@ -60,6 +60,12 @@ export type DiagramResponse = {
   links: DiagramLink[];
 };
 
+export type DiagramSaveResponse = {
+  success: boolean;
+  message: string;
+  timestamp: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class DiagramApiService {
   constructor(
@@ -69,6 +75,14 @@ export class DiagramApiService {
 
   fetchDiagram(): Observable<DiagramResponse> {
     return this.http.get<DiagramResponse>('/api/diagram');
+  }
+
+  saveDiagram(state: DiagramResponse): Observable<DiagramSaveResponse> {
+    return this.http.post<DiagramSaveResponse>('/api/diagram', state);
+  }
+
+  loadSavedDiagram(): Observable<DiagramResponse> {
+    return this.http.get<DiagramResponse>('/api/diagram/state');
   }
 
   connectDiagramStream(next: (response: DiagramResponse) => void): () => void {
