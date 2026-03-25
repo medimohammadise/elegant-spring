@@ -1,0 +1,506 @@
+{
+  "version": "1.0",
+  "entities": [
+    {
+      "id": "merchantApplication",
+      "label": "MerchantApplication",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_applications",
+        "idField": "id",
+        "description": "Aggregate root for merchant onboarding.",
+        "annotations": [
+          "@Entity",
+          "@Table(name = \"merchant_applications\")"
+        ],
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "column": "id",
+            "nullable": false,
+            "id": true
+          },
+          {
+            "name": "applicationReference",
+            "type": "String",
+            "column": "application_reference",
+            "nullable": false,
+            "unique": true
+          },
+          {
+            "name": "status",
+            "type": "MerchantOnboardingStatus",
+            "column": "status",
+            "nullable": false
+          },
+          {
+            "name": "createdAt",
+            "type": "Instant",
+            "column": "created_at",
+            "nullable": false
+          },
+          {
+            "name": "submittedAt",
+            "type": "Instant",
+            "column": "submitted_at",
+            "nullable": true
+          },
+          {
+            "name": "lastUpdatedAt",
+            "type": "Instant",
+            "column": "last_updated_at",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 120,
+        "y": 140
+      }
+    },
+    {
+      "id": "monitoringRecord",
+      "label": "MonitoringRecord",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_monitoring_records",
+        "idField": "id",
+        "description": "Monitoring record linked from a merchant application.",
+        "annotations": [
+          "@Entity",
+          "@Table(name = \"merchant_monitoring_records\")"
+        ],
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "column": "id",
+            "nullable": false,
+            "id": true
+          },
+          {
+            "name": "status",
+            "type": "MonitoringStatus",
+            "column": "status",
+            "nullable": false
+          },
+          {
+            "name": "lastTriggerReason",
+            "type": "String",
+            "column": "last_trigger_reason",
+            "nullable": false
+          },
+          {
+            "name": "lastReviewedAt",
+            "type": "Instant",
+            "column": "last_reviewed_at",
+            "nullable": false
+          },
+          {
+            "name": "createdAt",
+            "type": "Instant",
+            "column": "created_at",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 780,
+        "y": 140
+      }
+    },
+    {
+      "id": "businessProfile",
+      "label": "BusinessProfile",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_applications",
+        "idField": "merchant_application_id",
+        "description": "Embeddable stored inside MerchantApplication.",
+        "annotations": [
+          "@Embeddable"
+        ],
+        "fields": [
+          {
+            "name": "legalBusinessName",
+            "type": "String",
+            "column": "legal_business_name",
+            "nullable": false
+          },
+          {
+            "name": "businessType",
+            "type": "String",
+            "column": "business_type",
+            "nullable": false
+          },
+          {
+            "name": "registrationNumber",
+            "type": "String",
+            "column": "registration_number",
+            "nullable": false
+          },
+          {
+            "name": "operatingCountry",
+            "type": "String",
+            "column": "operating_country",
+            "nullable": false
+          },
+          {
+            "name": "primaryBusinessAddress",
+            "type": "String",
+            "column": "primary_business_address",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 20
+      }
+    },
+    {
+      "id": "primaryContact",
+      "label": "PrimaryContact",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_applications",
+        "idField": "merchant_application_id",
+        "description": "Embeddable stored inside MerchantApplication.",
+        "annotations": [
+          "@Embeddable"
+        ],
+        "fields": [
+          {
+            "name": "fullName",
+            "type": "String",
+            "column": "full_name",
+            "nullable": false
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "column": "email",
+            "nullable": false
+          },
+          {
+            "name": "phoneNumber",
+            "type": "String",
+            "column": "phone_number",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 120
+      }
+    },
+    {
+      "id": "person",
+      "label": "Person",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_people",
+        "idField": "merchant_application_id",
+        "description": "Embeddable element collection owned by MerchantApplication.",
+        "annotations": [
+          "@Embeddable",
+          "@ElementCollection"
+        ],
+        "fields": [
+          {
+            "name": "fullName",
+            "type": "String",
+            "column": "full_name",
+            "nullable": false
+          },
+          {
+            "name": "role",
+            "type": "PersonRole",
+            "column": "role",
+            "nullable": false
+          },
+          {
+            "name": "countryOfResidence",
+            "type": "String",
+            "column": "country_of_residence",
+            "nullable": false
+          },
+          {
+            "name": "ownershipPercentage",
+            "type": "Int",
+            "column": "ownership_percentage",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 220
+      }
+    },
+    {
+      "id": "supportingMaterial",
+      "label": "SupportingMaterial",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_supporting_materials",
+        "idField": "merchant_application_id",
+        "description": "Embeddable element collection owned by MerchantApplication.",
+        "annotations": [
+          "@Embeddable",
+          "@ElementCollection"
+        ],
+        "fields": [
+          {
+            "name": "type",
+            "type": "SupportingMaterialType",
+            "column": "type",
+            "nullable": false
+          },
+          {
+            "name": "fileName",
+            "type": "String",
+            "column": "file_name",
+            "nullable": false
+          },
+          {
+            "name": "storageKey",
+            "type": "String",
+            "column": "storage_key",
+            "nullable": false
+          },
+          {
+            "name": "uploadedAt",
+            "type": "Instant",
+            "column": "uploaded_at",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 320
+      }
+    },
+    {
+      "id": "reviewDecision",
+      "label": "ReviewDecision",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_review_decisions",
+        "idField": "merchant_application_id",
+        "description": "Embeddable element collection owned by MerchantApplication.",
+        "annotations": [
+          "@Embeddable",
+          "@ElementCollection"
+        ],
+        "fields": [
+          {
+            "name": "outcome",
+            "type": "ReviewOutcome",
+            "column": "outcome",
+            "nullable": false
+          },
+          {
+            "name": "reason",
+            "type": "String",
+            "column": "reason",
+            "nullable": false
+          },
+          {
+            "name": "reviewerId",
+            "type": "String",
+            "column": "reviewer_id",
+            "nullable": false
+          },
+          {
+            "name": "decidedAt",
+            "type": "Instant",
+            "column": "decided_at",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 420
+      }
+    },
+    {
+      "id": "riskAssessment",
+      "label": "RiskAssessment",
+      "type": "entity",
+      "status": "healthy",
+      "metadata": {
+        "kind": "jpa-entity",
+        "packageName": "com.elegant.software.blitzpay.merchant.domain",
+        "tableName": "merchant_applications",
+        "idField": "merchant_application_id",
+        "description": "Optional embeddable stored inside MerchantApplication.",
+        "annotations": [
+          "@Embeddable"
+        ],
+        "fields": [
+          {
+            "name": "level",
+            "type": "RiskLevel",
+            "column": "level",
+            "nullable": false
+          },
+          {
+            "name": "score",
+            "type": "Int",
+            "column": "score",
+            "nullable": false
+          },
+          {
+            "name": "rationale",
+            "type": "String",
+            "column": "rationale",
+            "nullable": false
+          },
+          {
+            "name": "assessedAt",
+            "type": "Instant",
+            "column": "assessed_at",
+            "nullable": false
+          }
+        ]
+      },
+      "layoutHint": {
+        "x": 420,
+        "y": 520
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "merchantApplication-businessProfile",
+      "source": "merchantApplication",
+      "target": "businessProfile",
+      "label": "embedded",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToOne",
+        "sourceField": "businessProfile",
+        "targetField": "merchantApplication",
+        "cardinality": "1:1",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-primaryContact",
+      "source": "merchantApplication",
+      "target": "primaryContact",
+      "label": "embedded",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToOne",
+        "sourceField": "primaryContact",
+        "targetField": "merchantApplication",
+        "cardinality": "1:1",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-riskAssessment",
+      "source": "merchantApplication",
+      "target": "riskAssessment",
+      "label": "embedded",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToOne",
+        "sourceField": "riskAssessment",
+        "targetField": "merchantApplication",
+        "cardinality": "1:0..1",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-person",
+      "source": "merchantApplication",
+      "target": "person",
+      "label": "elementCollection",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToMany",
+        "sourceField": "people",
+        "targetField": "merchantApplication",
+        "cardinality": "1:0..*",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-supportingMaterial",
+      "source": "merchantApplication",
+      "target": "supportingMaterial",
+      "label": "elementCollection",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToMany",
+        "sourceField": "supportingMaterials",
+        "targetField": "merchantApplication",
+        "cardinality": "1:0..*",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-reviewDecision",
+      "source": "merchantApplication",
+      "target": "reviewDecision",
+      "label": "elementCollection",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToMany",
+        "sourceField": "reviewDecisions",
+        "targetField": "merchantApplication",
+        "cardinality": "1:0..*",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    },
+    {
+      "id": "merchantApplication-monitoringRecord",
+      "source": "merchantApplication",
+      "target": "monitoringRecord",
+      "label": "oneToOne",
+      "channel": "JPA",
+      "metadata": {
+        "relationType": "OneToOne",
+        "sourceField": "monitoringRecord",
+        "targetField": "id",
+        "cardinality": "1:0..1",
+        "owningSide": true,
+        "fetch": "EAGER"
+      }
+    }
+  ]
+}

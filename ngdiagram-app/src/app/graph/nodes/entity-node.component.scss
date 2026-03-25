@@ -1,6 +1,8 @@
 :host {
   display: block;
-  width: 180px;
+  width: var(--entity-node-width, 212px);
+  min-width: 160px;
+  max-width: var(--entity-node-width, 212px);
   border-radius: 12px;
   overflow: hidden;
   background: var(--ngd-node-bg-primary-default, #ffffff);
@@ -24,13 +26,14 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  min-height: 72px;
 }
 
 .entity-node__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 11px 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
@@ -51,18 +54,24 @@
 
 .entity-node__name {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .entity-node__table {
+  display: block;
+  max-width: 100%;
   font-size: 0.72rem;
   opacity: 0.85;
   font-family: 'SF Mono', Monaco, Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // Port Styles
@@ -70,11 +79,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
   border-radius: 6px;
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -126,5 +135,18 @@
 :host-context([data-theme='dark']) {
   .entity-node__port {
     background: #1e293b;
+  }
+}
+
+@media (max-width: 768px) {
+  :host {
+    width: clamp(160px, 42vw, 190px);
+    min-width: 160px;
+  }
+
+  .entity-node__port {
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.58rem;
   }
 }

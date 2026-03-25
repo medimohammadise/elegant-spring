@@ -9,8 +9,8 @@
       </svg>
     </div>
     <div class="entity-node__info">
-      <h3 class="entity-node__name">{{ entityName() }}</h3>
-      <span class="entity-node__table">{{ tableName() }}</span>
+      <h3 class="entity-node__name" [attr.title]="entityTooltip()">{{ entityDisplayName() }}</h3>
+      <span class="entity-node__table" [attr.title]="tableTooltip()">{{ tableDisplayName() }}</span>
     </div>
   </div>
 

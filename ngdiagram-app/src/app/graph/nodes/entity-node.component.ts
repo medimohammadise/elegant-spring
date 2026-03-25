@@ -10,6 +10,7 @@ import type { DiagramNode, DiagramLink } from '../services/diagram-api.service';
 type DiagramNodeData = {
   label: string;
   entity: DiagramNode;
+  presentation: { nodeWidth: number };
   relationships?: DiagramLink[];
 };
 
@@ -25,15 +26,24 @@ type DiagramNodeData = {
   styleUrls: ['./entity-node.component.scss'],
   host: {
     '[class.ng-diagram-port-hoverable]': 'true',
+    '[style.--entity-node-width.px]': 'nodeWidth()',
   },
 })
 export class EntityNodeComponent implements NgDiagramNodeTemplate<DiagramNodeData> {
+  private static readonly MAX_NAME_LENGTH = 24;
+  private static readonly MAX_TABLE_LENGTH = 28;
+
   node = input.required<Node<DiagramNodeData>>();
 
   entity = computed(() => this.node().data.entity);
   entityName = computed(() => this.node().data.label);
   tableName = computed(() => this.entity().metadata?.tableName || '');
+  entityDisplayName = computed(() => this.truncateLabel(this.entityName(), EntityNodeComponent.MAX_NAME_LENGTH));
+  entityTooltip = computed(() => this.entityName());
+  tableDisplayName = computed(() => this.truncateLabel(this.tableName(), EntityNodeComponent.MAX_TABLE_LENGTH));
+  tableTooltip = computed(() => this.tableName());
   relationships = computed(() => this.node().data.relationships || []);
+  nodeWidth = computed(() => this.node().data.presentation?.nodeWidth ?? 212);
 
   // Get source ports (relationships where this entity is the source)
   sourceRelationships = computed(() => {
@@ -88,22 +98,14 @@ export class EntityNodeComponent implements NgDiagramNodeTemplate<DiagramNodeDat
    * Get position percentage for source ports (right side).
    */
   getSourcePortPosition(index: number, total: number): number {
-    if (total === 0) return 50;
-    if (total === 1) return 50;
-
-    const spacing = 60 / (total - 1 || 1);
-    return 20 + index * spacing;
+    return this.getPortPosition(index, total);
   }
 
   /**
    * Get position percentage for target ports (left side).
    */
   getTargetPortPosition(index: number, total: number): number {
-    if (total === 0) return 50;
-    if (total === 1) return 50;
-
-    const spacing = 60 / (total - 1 || 1);
-    return 20 + index * spacing;
+    return this.getPortPosition(index, total);
   }
 
   /**
@@ -122,5 +124,19 @@ export class EntityNodeComponent implements NgDiagramNodeTemplate<DiagramNodeDat
       default:
         return 'cardinality-unknown';
     }
+  }
+
+  private getPortPosition(index: number, total: number): number {
+    if (total <= 1) return 50;
+
+    const start = total > 6 ? 10 : 16;
+    const end = total > 6 ? 90 : 84;
+    const spacing = (end - start) / (total - 1);
+    return start + index * spacing;
+  }
+
+  private truncateLabel(value: string, maxLength: number): string {
+    if (!value || value.length <= maxLength) return value;
+    return `${value.slice(0, maxLength - 1)}…`;
   }
 }

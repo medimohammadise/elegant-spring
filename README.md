@@ -130,6 +130,7 @@ Current behavior:
 - a bottom-right `AI Chat` launcher opens a CoreUI offcanvas assistant panel
 - entities render as selectable nodes
 - a minimap appears after `diagramInit`
+- larger diagrams auto-fit to the visible canvas on load or restore when the saved viewport no longer matches the current graph
 - clicking an entity opens the right sidebar
 - sidebar shows:
   - description
@@ -142,6 +143,8 @@ Current behavior:
   - relationships connected to that entity
 
 The sidebar currently uses entity selection as the main inspection path for relationships. Relationship metadata is shown inside the selected entity’s `Relationships` section.
+
+For large diagrams, use `Reset / Load -> Fit to Screen` to reframe the current graph after importing a saved layout or switching between samples with very different sizes.
 
 ## Routes
 

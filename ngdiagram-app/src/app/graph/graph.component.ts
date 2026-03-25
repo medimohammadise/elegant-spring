@@ -18,6 +18,7 @@ import {
 import {
   NgDiagramBackgroundComponent,
   NgDiagramComponent,
+  type NgDiagramConfig,
   type Edge,
   NgDiagramEdgeTemplateMap,
   NgDiagramMinimapComponent,
@@ -36,10 +37,25 @@ import { getRelationshipEdgeType } from './relationship-edge-styles';
 
 const DEFAULT_POSITION_SPREAD = 220;
 const STATE_STORAGE_KEY = 'domain-model-diagram-state-v1';
+const DEFAULT_FIT_PADDING: [number, number, number, number] = [72, 108, 72, 108];
+const LARGE_DIAGRAM_FIT_PADDING: [number, number, number, number] = [40, 64, 40, 64];
+const LARGE_DIAGRAM_NODE_THRESHOLD = 14;
+const LARGE_DIAGRAM_EDGE_THRESHOLD = 18;
+const LARGE_DIAGRAM_SPAN_X_THRESHOLD = 1600;
+const LARGE_DIAGRAM_SPAN_Y_THRESHOLD = 1200;
+const MIN_RESTORABLE_ZOOM = 0.18;
+const MAX_RESTORABLE_ZOOM = 2.5;
+const LARGE_DIAGRAM_MAX_RESTORED_ZOOM = 1.1;
+const DEFAULT_STAGE_WIDTH = 980;
+const DEFAULT_STAGE_HEIGHT = 620;
+const MIN_NODE_WIDTH = 176;
+const MAX_NODE_WIDTH = 320;
+const ESTIMATED_NODE_HEIGHT = 88;
 
 type DiagramNodeData = {
   label: string;
   entity: DiagramNode;
+  presentation: GraphPresentation;
 };
 
 type DiagramEdgeData = {
@@ -59,7 +75,21 @@ type SavedDiagramState = {
   nodes?: Array<{ id: string; position?: { x: number; y: number } }>;
   metadata?: {
     viewport?: { x?: number; y?: number; zoom?: number };
+    graph?: GraphSignature;
   };
+};
+
+type GraphSignature = {
+  nodeCount: number;
+  edgeCount: number;
+  spanX: number;
+  spanY: number;
+};
+
+type GraphPresentation = {
+  nodeWidth: number;
+  fitPadding: [number, number, number, number];
+  rect: { x: number; y: number; width: number; height: number };
 };
 
 type UiToast = {
@@ -98,6 +128,7 @@ type UiToast = {
           <div>
             <p class="panel__eyebrow">Workspace</p>
             <h3>Entity Diagram</h3>
+            <p class="panel__hint">Large models auto-fit on load. Use Fit to Screen to reframe the full canvas at any time.</p>
           </div>
           <div class="toolbar" role="group" aria-label="Diagram actions">
             <c-dropdown alignment="end" variant="btn-group">
@@ -125,6 +156,8 @@ type UiToast = {
                 Reset / Load
               </button>
               <ul cDropdownMenu>
+                <li><button (click)="fitDiagramToView(true)" cDropdownItem>Fit to Screen</button></li>
+                <li><hr cDropdownDivider></li>
                 <li><button (click)="restoreDiagramState()" cDropdownItem>Restore from Browser</button></li>
                 <li><button (click)="clearSavedDiagramState()" cDropdownItem>Clear saved layout (Browser)</button></li>
                 <li><button (click)="loadFromServer()" cDropdownItem>Load from Server</button></li>
@@ -139,10 +172,10 @@ type UiToast = {
           <div class="empty-state" *ngIf="!error && !hasNodes()">
             <div class="empty-state-card">
               <strong>Waiting for domain model data</strong>
-              <p>POST JPA entities and relationships to <code>/api/diagram</code> to render the model.</p>
+              <p>POST JPA entities and relationships to <code>/api/diagram</code> to render the model. Larger diagrams are auto-fitted once data arrives.</p>
             </div>
           </div>
-          <ng-diagram [model]="model" [edgeTemplateMap]="edgeTemplateMap" [nodeTemplateMap]="nodeTemplateMap" (diagramInit)="diagramReady.set(true)">
+          <ng-diagram [config]="config" [model]="model" [edgeTemplateMap]="edgeTemplateMap" [nodeTemplateMap]="nodeTemplateMap" (diagramInit)="diagramReady.set(true)">
             <ng-diagram-background type="dots"></ng-diagram-background>
             <ng-diagram-minimap
               *ngIf="diagramReady()"
@@ -348,6 +381,14 @@ type UiToast = {
       .panel__header h3 {
         margin: 0;
         font-size: 1.1rem;
+      }
+
+      .panel__hint {
+        margin: 0.35rem 0 0;
+        color: var(--cui-secondary-color);
+        font-size: 0.86rem;
+        line-height: 1.45;
+        max-width: 36rem;
       }
 
       .toolbar {
@@ -565,6 +606,13 @@ export class GraphComponent implements OnInit {
     y: 140 + 150 * Math.floor(idx / 3),
   });
 
+  readonly config: NgDiagramConfig = {
+    zoom: {
+      min: MIN_RESTORABLE_ZOOM,
+      max: MAX_RESTORABLE_ZOOM,
+    },
+  };
+
   nodeTemplateMap = new NgDiagramNodeTemplateMap([
     ['jpa-entity', EntityNodeComponent],
   ]);
@@ -579,6 +627,7 @@ export class GraphComponent implements OnInit {
 
   model = initializeModel({ nodes: [], edges: [] }, this.injector);
   graphState = signal<DiagramResponse | undefined>(undefined);
+  graphPresentation = signal<GraphPresentation>(this.buildGraphPresentation());
   selectedNode = computed(() => this.selectionService.selection().nodes[0] as Node<DiagramNodeData> | undefined);
   selectedEdge = computed(() => this.selectionService.selection().edges[0] as Edge<DiagramEdgeData> | undefined);
   selectedEntity = computed(() => this.selectedNode()?.data.entity);
@@ -600,7 +649,7 @@ export class GraphComponent implements OnInit {
   ngOnInit(): void {
     const buildModel = (graph: DiagramResponse) => {
       this.hasConnected = true;
-      this.rebuildModelFromGraph(graph, this.readSavedState());
+      this.rebuildModelFromGraph(graph);
       this.error = undefined;
     };
 
@@ -760,48 +809,7 @@ export class GraphComponent implements OnInit {
     try {
       this.api.loadSavedDiagram().subscribe({
         next: (state) => {
-          // Apply the loaded state by rebuilding nodes and edges
-          const savedState = state as DiagramResponse;
-          if (savedState.nodes) {
-            // Preserve saved positions from server response
-            const savedPositions = new Map(savedState.nodes.map(n => [n.id, n.position]));
-
-            // Get current graph data
-            const currentGraph = this.graphState();
-            if (currentGraph) {
-              // Rebuild with saved positions
-              this.model.updateNodes(
-                currentGraph.nodes.map((node, idx) => ({
-                  id: node.id,
-                  position: savedPositions.get(node.id) ?? node.position ?? this.fallbackPosition(idx),
-                  type: 'jpa-entity',
-                  data: {
-                    label: node.name,
-                    entity: node,
-                    relationships: currentGraph.links,
-                  },
-                })),
-              );
-
-              this.model.updateEdges(
-                currentGraph.links.map((link, idx) => ({
-                  id: link.id ?? `edge-${idx}`,
-                  source: link.source,
-                  target: link.target,
-                  type: getRelationshipEdgeType(link.metadata?.relationType, link.metadata?.cardinality),
-                  data: {
-                    label: link.label ?? '',
-                    channel: link.channel ?? '',
-                    relation: link.metadata,
-                  },
-                })),
-              );
-
-              setTimeout(() => {
-                this.viewportService.zoomToFit({ padding: [80, 120, 80, 120] });
-              }, 100);
-            }
-          }
+          this.rebuildModelFromGraph(state, undefined, true);
           this.pushToast('success', 'Loaded from server', 'Diagram state restored from server.');
         },
         error: (err) => {
@@ -831,14 +839,18 @@ export class GraphComponent implements OnInit {
       reader.onload = (e) => {
         try {
           const state = JSON.parse(e.target?.result as string);
-          // Apply the loaded state by rebuilding nodes and edges
-          if (state.nodes) {
-            this.model.updateNodes(state.nodes);
+          if (Array.isArray(state.nodes) && Array.isArray(state.links)) {
+            this.rebuildModelFromGraph(state as DiagramResponse, undefined, true);
+          } else {
+            if (state.nodes) {
+              this.model.updateNodes(state.nodes);
+            }
+            if (state.edges) {
+              this.model.updateEdges(state.edges);
+            }
+            this.scheduleViewportAdjustment(this.graphState(), undefined, true, 120);
           }
-          if (state.edges) {
-            this.model.updateEdges(state.edges);
-          }
-          this.pushToast('success', 'File loaded', 'Diagram state loaded from file.');
+          this.pushToast('success', 'File loaded', 'Diagram state loaded from file and fitted to the canvas.');
         } catch (error) {
           this.pushToast('danger', 'Load failed', 'Invalid diagram state file.');
           console.error(error);
@@ -858,9 +870,11 @@ export class GraphComponent implements OnInit {
     return toast.id;
   }
 
-  private rebuildModelFromGraph(graph: DiagramResponse, savedState?: SavedDiagramState): void {
+  private rebuildModelFromGraph(graph: DiagramResponse, savedState?: SavedDiagramState, forceFit: boolean = false): void {
     this.hasNodes.set(graph.nodes.length > 0);
     this.graphState.set(graph);
+    const presentation = this.buildGraphPresentation(graph);
+    this.graphPresentation.set(presentation);
     const persistedPositions = new Map(savedState?.nodes?.map((node) => [node.id, node.position]));
     const allLinks = graph.links;
 
@@ -872,6 +886,7 @@ export class GraphComponent implements OnInit {
         data: {
           label: node.name,
           entity: node,
+          presentation,
           relationships: allLinks,
         },
       })),
@@ -891,9 +906,7 @@ export class GraphComponent implements OnInit {
       })),
     );
 
-    setTimeout(() => {
-      this.restoreViewport(savedState);
-    }, savedState ? 150 : 100);
+    this.scheduleViewportAdjustment(graph, savedState, forceFit, savedState ? 150 : 100);
   }
 
   private readSavedState(): SavedDiagramState | undefined {
@@ -919,11 +932,18 @@ export class GraphComponent implements OnInit {
         }))
       : [];
 
-    const viewport = this.getRestorableViewport(rawState as SavedDiagramState);
+    const graph = this.extractGraphSignatureFromState(rawState);
+    const viewport = this.getRestorableViewport(rawState as SavedDiagramState, graph);
 
     return {
       nodes: savedNodes,
-      metadata: viewport ? { viewport } : undefined,
+      metadata:
+        viewport || graph
+          ? {
+              viewport,
+              graph,
+            }
+          : undefined,
     };
   }
 
@@ -936,12 +956,13 @@ export class GraphComponent implements OnInit {
       })),
     );
 
-    setTimeout(() => {
-      this.restoreViewport(savedState);
-    }, 150);
+    this.scheduleViewportAdjustment(graph, savedState, false, 150);
   }
 
-  private getRestorableViewport(state?: SavedDiagramState): { x?: number; y?: number; zoom?: number } | undefined {
+  private getRestorableViewport(
+    state?: SavedDiagramState,
+    graphSignature?: GraphSignature,
+  ): { x?: number; y?: number; zoom?: number } | undefined {
     const viewport = state?.metadata?.viewport;
     if (!viewport) return undefined;
 
@@ -956,16 +977,28 @@ export class GraphComponent implements OnInit {
     }
 
     const zoom = viewport.zoom;
-    if (typeof zoom === 'number' && Number.isFinite(zoom) && zoom > 0.1 && zoom < 4) {
-      nextViewport.zoom = zoom;
+    if (typeof zoom === 'number' && Number.isFinite(zoom) && zoom >= MIN_RESTORABLE_ZOOM && zoom <= MAX_RESTORABLE_ZOOM) {
+      nextViewport.zoom = this.isLargeDiagram(graphSignature)
+        ? Math.min(zoom, LARGE_DIAGRAM_MAX_RESTORED_ZOOM)
+        : zoom;
     }
 
     return Object.keys(nextViewport).length > 0 ? nextViewport : undefined;
   }
 
-  private restoreViewport(savedState?: SavedDiagramState): void {
-    const viewport = this.getRestorableViewport(savedState);
-    if (viewport) {
+  fitDiagramToView(showToast: boolean = false): void {
+    const graph = this.graphState();
+    this.applyFitToView(graph ? this.buildGraphPresentation(graph) : this.buildGraphPresentation());
+
+    if (showToast) {
+      this.pushToast('primary', 'Canvas fitted', 'The diagram was reframed to show the full graph.');
+    }
+  }
+
+  private restoreViewport(graph?: DiagramResponse, savedState?: SavedDiagramState, forceFit: boolean = false): void {
+    const graphSignature = graph ? this.extractGraphSignature(graph) : undefined;
+    const viewport = forceFit ? undefined : this.getRestorableViewport(savedState, graphSignature);
+    if (viewport && this.shouldRestoreViewport(savedState, graphSignature)) {
       this.model.updateMetadata((metadata) => ({
         ...metadata,
         viewport: {
@@ -976,7 +1009,154 @@ export class GraphComponent implements OnInit {
       return;
     }
 
-    this.viewportService.zoomToFit({ padding: [80, 120, 80, 120] });
+    this.applyFitToView(graph ? this.buildGraphPresentation(graph) : this.buildGraphPresentation());
+  }
+
+  private shouldRestoreViewport(savedState: SavedDiagramState | undefined, currentGraph?: GraphSignature): boolean {
+    if (!savedState?.metadata?.viewport || !currentGraph) return false;
+
+    const savedGraph = savedState.metadata.graph;
+    if (!savedGraph) {
+      return !this.isLargeDiagram(currentGraph);
+    }
+
+    return this.isEquivalentGraph(savedGraph, currentGraph);
+  }
+
+  private scheduleViewportAdjustment(
+    graph?: DiagramResponse,
+    savedState?: SavedDiagramState,
+    forceFit: boolean = false,
+    delay: number = 100,
+  ): void {
+    setTimeout(() => {
+      this.restoreViewport(graph, savedState, forceFit);
+    }, delay);
+  }
+
+  private applyFitToView(presentation: GraphPresentation): void {
+    this.viewportService.zoomToFit({
+      padding: presentation.fitPadding,
+    });
+    this.viewportService.centerOnRect(presentation.rect);
+  }
+
+  private extractGraphSignature(graph: DiagramResponse): GraphSignature {
+    return this.buildGraphSignature(
+      graph.nodes.map((node, idx) => ({ position: node.position ?? this.fallbackPosition(idx) })),
+      graph.links.length,
+    );
+  }
+
+  private extractGraphSignatureFromState(rawState: any): GraphSignature | undefined {
+    const nodes = Array.isArray(rawState?.nodes) ? rawState.nodes : [];
+    if (!nodes.length) return undefined;
+
+    const edgeCount = Array.isArray(rawState?.edges)
+      ? rawState.edges.length
+      : Array.isArray(rawState?.links)
+        ? rawState.links.length
+        : 0;
+
+    return this.buildGraphSignature(nodes, edgeCount);
+  }
+
+  private buildGraphSignature(
+    nodes: Array<{ position?: { x?: number; y?: number } }>,
+    edgeCount: number,
+  ): GraphSignature {
+    const positions = nodes
+      .map((node, idx) => node.position ?? this.fallbackPosition(idx))
+      .filter((position): position is { x: number; y: number } => Number.isFinite(position.x) && Number.isFinite(position.y));
+
+    if (!positions.length) {
+      return {
+        nodeCount: nodes.length,
+        edgeCount,
+        spanX: 0,
+        spanY: 0,
+      };
+    }
+
+    const xs = positions.map((position) => position.x);
+    const ys = positions.map((position) => position.y);
+
+    return {
+      nodeCount: nodes.length,
+      edgeCount,
+      spanX: Math.max(...xs) - Math.min(...xs),
+      spanY: Math.max(...ys) - Math.min(...ys),
+    };
+  }
+
+  private buildGraphPresentation(graph?: DiagramResponse): GraphPresentation {
+    const stageWidth = this.diagramStage?.nativeElement?.clientWidth || DEFAULT_STAGE_WIDTH;
+    const stageHeight = this.diagramStage?.nativeElement?.clientHeight || DEFAULT_STAGE_HEIGHT;
+
+    if (!graph || graph.nodes.length === 0) {
+      return {
+        nodeWidth: 220,
+        fitPadding: DEFAULT_FIT_PADDING,
+        rect: { x: 0, y: 0, width: stageWidth, height: stageHeight },
+      };
+    }
+
+    const positions = graph.nodes.map((node, idx) => node.position ?? this.fallbackPosition(idx));
+    const xs = positions.map((position) => position.x);
+    const ys = positions.map((position) => position.y);
+    const uniqueColumns = new Set(xs.map((value) => Math.round(value / 20))).size || 1;
+    const graphSignature = this.extractGraphSignature(graph);
+    const fitPadding = this.isLargeDiagram(graphSignature) ? LARGE_DIAGRAM_FIT_PADDING : DEFAULT_FIT_PADDING;
+
+    const availableWidth = Math.max(stageWidth - fitPadding[1] - fitPadding[3], stageWidth * 0.55);
+    const nodeWidth = this.clamp((availableWidth / uniqueColumns) * 0.7, MIN_NODE_WIDTH, MAX_NODE_WIDTH);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    return {
+      nodeWidth,
+      fitPadding,
+      rect: {
+        x: minX,
+        y: minY,
+        width: Math.max(maxX - minX + nodeWidth, nodeWidth),
+        height: Math.max(maxY - minY + ESTIMATED_NODE_HEIGHT, ESTIMATED_NODE_HEIGHT),
+      },
+    };
+  }
+
+  private isLargeDiagram(graph?: GraphSignature): boolean {
+    if (!graph) return false;
+
+    return (
+      graph.nodeCount >= LARGE_DIAGRAM_NODE_THRESHOLD ||
+      graph.edgeCount >= LARGE_DIAGRAM_EDGE_THRESHOLD ||
+      graph.spanX >= LARGE_DIAGRAM_SPAN_X_THRESHOLD ||
+      graph.spanY >= LARGE_DIAGRAM_SPAN_Y_THRESHOLD
+    );
+  }
+
+  private isEquivalentGraph(saved: GraphSignature, current: GraphSignature): boolean {
+    return (
+      saved.nodeCount === current.nodeCount &&
+      saved.edgeCount === current.edgeCount &&
+      this.isWithinTolerance(saved.spanX, current.spanX) &&
+      this.isWithinTolerance(saved.spanY, current.spanY)
+    );
+  }
+
+  private isWithinTolerance(left: number, right: number): boolean {
+    if (left === right) return true;
+
+    const baseline = Math.max(left, right, 1);
+    return Math.abs(left - right) / baseline <= 0.35;
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
   }
 
   private pushToast(color: UiToast['color'], title: string, message: string): void {

@@ -1,2 +1,10 @@
 mcp-server/node_modules/
 mcp-server/dist/
+ngdiagram-app/node_modules/
+ngdiagram-app/dist/
+build/
+*.log
+.env*
+.DS_Store
+.idea/
+.vscode/
