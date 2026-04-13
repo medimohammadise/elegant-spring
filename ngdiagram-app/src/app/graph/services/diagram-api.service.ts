@@ -1,6 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export type DiagramNode = {
   id: string;
@@ -73,21 +74,26 @@ export class DiagramApiService {
     private readonly zone: NgZone,
   ) {}
 
+  private readonly apiBase = environment.apiBaseUrl;
+  private readonly wsBase = environment.wsBaseUrl;
+
   fetchDiagram(): Observable<DiagramResponse> {
-    return this.http.get<DiagramResponse>('/api/diagram');
+    return this.http.get<DiagramResponse>(`${this.apiBase}/api/diagram`);
   }
 
   saveDiagram(state: DiagramResponse): Observable<DiagramSaveResponse> {
-    return this.http.post<DiagramSaveResponse>('/api/diagram', state);
+    return this.http.post<DiagramSaveResponse>(`${this.apiBase}/api/diagram`, state);
   }
 
   loadSavedDiagram(): Observable<DiagramResponse> {
-    return this.http.get<DiagramResponse>('/api/diagram/state');
+    return this.http.get<DiagramResponse>(`${this.apiBase}/api/diagram/state`);
   }
 
   connectDiagramStream(next: (response: DiagramResponse) => void): () => void {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/diagram`);
+    const wsUrl = this.wsBase
+      ? `${this.wsBase}/ws/diagram`
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/diagram`;
+    const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {
       try {
