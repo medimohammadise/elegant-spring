@@ -1,0 +1,11 @@
+{
+  "name": "elegent-spring-diagram",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node mock-server.js",
+    "build": "cd ngdiagram-app && npm ci && npm run build",
+    "test": "echo \"No root-level tests configured\" && exit 0"
+  }
+}
