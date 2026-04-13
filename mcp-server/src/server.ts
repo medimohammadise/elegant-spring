@@ -88,7 +88,21 @@ app.all('/mcp', async (req, res) => {
     if (sessionId && mcpTransports[sessionId]) {
       // Reuse existing session (handles POST, GET for SSE, DELETE)
       transport = mcpTransports[sessionId];
-    } else if (!sessionId && req.method === 'POST' && isInitializeRequest(req.body)) {
+    } else if (!sessionId && req.method === 'POST') {
+      // Check if this is an initialize request (try both raw body and wrapped)
+      const body = req.body;
+      const isInit = isInitializeRequest(body)
+        || (Array.isArray(body) && body.some(isInitializeRequest));
+
+      if (!isInit) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: No valid session ID and not an initialize request' },
+          id: null,
+        });
+        return;
+      }
+
       // New session – create transport and wire up a fresh MCP server
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
